@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Generator</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { background: #f5f5f5; padding: 20px; border-radius: 8px; }
+        textarea { width: 100%; height: 100px; margin: 10px 0; padding: 10px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .loading { display: none; color: #007bff; margin: 10px 0; }
+        .error { color: red; margin: 10px 0; }
+        .success { color: green; margin: 10px 0; }
+        video { width: 100%; max-width: 600px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Video Generator</h1>
+        <p>Enter a topic to generate an educational video:</p>
+        
+        <textarea id="topicInput" placeholder="Enter your topic here..."></textarea>
+        
+        <button id="generateBtn" onclick="generateVideo()">Generate Video</button>
+        
+        <div id="loading" class="loading">🔄 Generating video... This may take a few minutes.</div>
+        <div id="error" class="error"></div>
+        <div id="success" class="success"></div>
+        
+        <div id="videoContainer" style="display: none;">
+            <h3>Generated Video:</h3>
+            <video id="generatedVideo" controls>
+                Your browser does not support the video tag.
+            </video>
+            <br>
+            <a id="downloadLink" download>📥 Download Video</a>
+        </div>
+    </div>
+
+    <script>
+        async function generateVideo() {
+            const topic = document.getElementById('topicInput').value.trim();
+            if (!topic) {
+                showError('Please enter a topic');
+                return;
+            }
+
+            const generateBtn = document.getElementById('generateBtn');
+            const loading = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
+            const videoContainer = document.getElementById('videoContainer');
+
+            // Reset UI
+            generateBtn.disabled = true;
+            loading.style.display = 'block';
+            errorDiv.textContent = '';
+            successDiv.textContent = '';
+            videoContainer.style.display = 'none';
+
+            try {
+                const response = await fetch('/generate-video', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ topic: topic })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    showError(`Server error: ${response.status} - ${errorText}`);
+                    return;
+                }
+
+                const result = await response.json();
+                successDiv.textContent = result.message;
+                
+                // Show video
+                const video = document.getElementById('generatedVideo');
+                const downloadLink = document.getElementById('downloadLink');
+                
+                video.src = result.video_url;
+                downloadLink.href = result.video_url;
+                downloadLink.download = `${result.video_id}.mp4`;
+                
+                videoContainer.style.display = 'block';
+                
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                generateBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('error').textContent = message;
+        }
+    </script>
+</body>
+</html>
